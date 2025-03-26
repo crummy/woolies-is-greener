@@ -1,0 +1,11 @@
+---
+description: 
+globs: *.ts*
+alwaysApply: false
+---
+
+# TypeScript code conventions
+
+- Use modern ES2024 syntax
+- Never use `any`
+- Destructure where suitable
