@@ -9,3 +9,5 @@ alwaysApply: false
 - Use modern ES2024 syntax
 - Never use `any`
 - Destructure where suitable
+- Use `type` when importing type-only imports
+- Append `.ts` to imports

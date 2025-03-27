@@ -2,50 +2,48 @@
 
 ## Phase 1: Project Setup & Infrastructure
 
-- [ ] Initialize Remix project with TypeScript configuration
-- [ ] Set up Cloudflare Pages project with D1 database
-- [ ] Configure GitHub repository with CI/CD pipeline for Cloudflare deployment
-- [ ] Set up development environment with necessary tooling
-- [ ] Initialize frontend project with Svelte and React components
-- [ ] Configure Tailwind CSS for styling
-- [ ] Set up project structure and basic routing
+- [x] Initialize Remix project with TypeScript configuration
+- [x] Set up Cloudflare Pages project with KV store
+- [x] Configure GitHub repository with CI/CD pipeline for Cloudflare deployment
+- [x] Set up development environment with necessary tooling
+- [x] Configure Tailwind CSS for styling
+- [x] Set up project structure and basic routing using Remix conventions
 
 ## Phase 2: Data Collection & Storage
 
 - [ ] Research Woolworths NZ and AU websites to understand their structure
-- [ ] Create scraping scripts using Remix to extract product data
+- [ ] Create scraping scripts to extract product data
   - [ ] Script for AU Woolworths site
   - [ ] Script for NZ Woolworths site
-- [ ] Design D1 database schema based on product model
-  - [ ] Products table
-  - [ ] Categories table
-  - [ ] Baskets table
-  - [ ] Product-Basket relationship table
-- [ ] Implement database migration scripts
+- [ ] Design data structure for Cloudflare KV store
+  - [ ] Products collection
+  - [ ] Categories collection
+  - [ ] Baskets collection
+  - [ ] Product-Basket relationships
 - [ ] Create data processing scripts to:
   - [ ] Clean and normalize scraped data
   - [ ] Match products between countries
   - [ ] Assign products to baskets and categories
   - [ ] Calculate price differences and percentages
-- [ ] Populate database with processed data
+- [ ] Populate KV store with processed data
 - [ ] Create configuration for static currency conversion rate
 
-## Phase 3: Backend API Development
+## Phase 3: Backend API Development with Remix
 
-- [ ] Set up Remix server with Cloudflare Workers
-- [ ] Design and implement API endpoints:
-  - [ ] GET /api/baskets - List all basket types
-  - [ ] GET /api/baskets/:type - Get all products in a specific basket
-  - [ ] GET /api/categories - List all product categories
-  - [ ] GET /api/categories/:category - Get products in a specific category
-  - [ ] GET /api/products/:id - Get details for a specific product
+- [ ] Set up Remix loaders and actions for data fetching
+- [ ] Design and implement data access functions:
+  - [ ] getBaskets() - List all basket types
+  - [ ] getBasketProducts(type) - Get all products in a specific basket
+  - [ ] getCategories() - List all product categories
+  - [ ] getCategoryProducts(category) - Get products in a specific category
+  - [ ] getProduct(id) - Get details for a specific product
 - [ ] Implement currency conversion functionality
-- [ ] Set up error handling and API response formatting
-- [ ] Create TypeScript interfaces for all API response types
-- [ ] Write unit tests for API endpoints
-- [ ] Document API using OpenAPI/Swagger
+- [ ] Set up error handling and data response formatting
+- [ ] Create TypeScript interfaces for all data models
+- [ ] Write unit tests for data access functions
+- [ ] Document backend functionality
 
-## Phase 4: Frontend Development
+## Phase 4: Frontend Development with Remix and React
 
 - [ ] Create TypeScript interfaces for all data models
 - [ ] Design and implement common UI components:
@@ -55,12 +53,12 @@
   - [ ] Basket type selector
   - [ ] Category filter
   - [ ] Product comparison card
-- [ ] Implement main application pages:
+- [ ] Implement main application pages/routes:
   - [ ] Homepage with app explanation and basket selection
   - [ ] Basket view page
   - [ ] Category view page
-- [ ] Create API service layer for data fetching
-- [ ] Implement state management with Svelte stores
+- [ ] Set up client-side data fetching using Remix useLoaderData
+- [ ] Implement client-side state management
 - [ ] Style all components with Tailwind CSS
 - [ ] Create responsive layouts for mobile and desktop
 - [ ] Implement loading states and error handling
@@ -83,16 +81,16 @@
 - [ ] Perform end-to-end testing
 - [ ] Optimize performance:
   - [ ] Image optimization
-  - [ ] Code splitting
+  - [ ] Code splitting (using Remix's built-in capabilities)
   - [ ] Bundle size optimization
 - [ ] Implement browser caching strategies
 - [ ] Test across different browsers and devices
 - [ ] Perform accessibility testing (WCAG compliance)
-- [ ] Optimize SEO
+- [ ] Optimize SEO (using Remix's meta functions)
 
 ## Phase 7: Deployment & Launch
 
-- [ ] Set up production environment on Cloudflare
+- [ ] Set up production environment on Cloudflare Pages
 - [ ] Configure custom domain (if applicable)
 - [ ] Set up analytics tracking
 - [ ] Create deployment pipeline for CI/CD
@@ -106,8 +104,8 @@
 - [ ] Create user documentation
 - [ ] Write technical documentation:
   - [ ] System architecture
-  - [ ] API documentation
-  - [ ] Database schema
+  - [ ] Data structure
+  - [ ] KV store organization
   - [ ] Deployment process
 - [ ] Document data update process
 - [ ] Create maintenance guide
@@ -116,6 +114,8 @@
 
 - [ ] Implement data versioning for price updates
 - [ ] Add last updated timestamps for price data
-- [ ] Create admin interface for manual data updates
+- [ ] Create admin interface for manual data updates (potentially a separate
+      Remix route)
 - [ ] Consider implementing basic analytics to track most viewed comparisons
 - [ ] Plan for periodic data refreshes
+- [ ] Implement caching strategies for KV store data to minimize read operations

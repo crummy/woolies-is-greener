@@ -11,6 +11,15 @@ directory = "./build/client"
 [observability]
 enabled = true
 
+[[d1_databases]]
+binding = "DB"
+database_name = "woolies-db"
+database_id = "e35cc641-0690-4848-94df-bb8c215ae52a"
+
+[[kv_namespaces]]
+binding = "WOOLIES_KV"
+id = "cb35448b8f9e46f7843ee6826807c976"
+
 # Smart Placement
 # Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 # [placement]

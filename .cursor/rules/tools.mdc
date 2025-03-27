@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Wrangler
+
+To run wrangler, use `npx wrangler`
