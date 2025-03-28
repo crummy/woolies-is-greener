@@ -4,11 +4,11 @@
 
 ### 1. Products
 
-- Key: `product:{id}` (e.g., `product:123`)
+- Key: `product:{sku}` (e.g., `product:123`)
 - Value: JSON object containing:
   ```json
   {
-      "id": "123",
+      "sku": "123",
       "name": "Cage-Free Size 7 Eggs (Dozen)",
       "description": "Farm fresh cage-free eggs",
       "imageUrl": "https://example.com/eggs.jpg",

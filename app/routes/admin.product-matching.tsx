@@ -58,15 +58,25 @@ export async function action({
     request,
   }: ActionFunctionArgs) {
     const formData = await request.formData();
-    const q = formData.get("q");
-    return redirect(`/admin/product-matching?q=${q}`);
+    const intent = formData.get("intent");
+    switch (intent) {
+      case "search":
+        const q = formData.get("q");
+        return redirect(`/admin/product-matching?q=${q}`);
+      case "match":
+        const auProduct = JSON.parse(formData.get("auProduct") as string) as AUProduct;
+        const nzProduct = JSON.parse(formData.get("nzProduct") as string) as NZProduct;
+        return null;
+      default:
+        console.error("Invalid intent", intent);
+        return json({ error: "Invalid intent" }, { status: 400 });
+    }
 }
 
 export default function AdminProductMatching() {
   const navigation = useNavigation();
-  const isSubmitting =
-    navigation.formAction === "/recipes/new";
-  const { auProducts, nzProducts, error } = useLoaderData<typeof loader>();
+  const isSubmitting = navigation.formAction === "/recipes/new";
+  const { auProducts, nzProducts, error } = useLoaderData<LoaderData>();
   const [selectedAU, setSelectedAU] = useState<AUProduct | null>(null);
   const [selectedNZ, setSelectedNZ] = useState<NZProduct | null>(null);
   const [searchParams] = useSearchParams()
@@ -77,6 +87,7 @@ export default function AdminProductMatching() {
       
       <div className="mb-4">
         <Form method="post" className="flex gap-2">
+          <input type="hidden" name="intent" value="search"/>
           <input
             type="text"
             name="q"
@@ -164,8 +175,9 @@ export default function AdminProductMatching() {
       </div>
 
       {selectedAU && selectedNZ && (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex justify-center fixed bottom-0 w-full p-4">
           <Form method="post">
+          <input type="hidden" name="intent" value="match"/>
             <input type="hidden" name="auProduct" value={JSON.stringify(selectedAU)} />
             <input type="hidden" name="nzProduct" value={JSON.stringify(selectedNZ)} />
             <button

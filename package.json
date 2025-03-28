@@ -15,15 +15,23 @@
 		"cf-typegen": "wrangler types",
 		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
 		"format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-		"scrape": "node --experimental-strip-types scrapers/search.ts"
+		"migrations:apply:local": "wrangler d1 migrations apply DB --local",
+		"migrations:apply:remote": "wrangler d1 migrations apply DB --remote",
+		"migrations:create": "wrangler d1 migrations create woolies-db",
+		"codegen": "kysely-codegen"
 	},
 	"dependencies": {
 		"@remix-run/cloudflare": "^2.15.3",
 		"@remix-run/react": "^2.15.3",
 		"@remix-run/server-runtime": "^2.15.3",
+		"better-sqlite3": "^11.9.1",
 		"isbot": "^4.1.0",
+		"kysely": "^0.27.6",
+		"kysely-codegen": "^0.18.3",
+		"kysely-d1": "^0.3.0",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
+		"ulidx": "^2.4.1",
 		"zod": "^3.24.2"
 	},
 	"devDependencies": {
