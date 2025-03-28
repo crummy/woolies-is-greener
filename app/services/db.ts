@@ -31,21 +31,24 @@ export async function linkProducts(
         imageUrl: nzProduct.images.big,
         updated: new Date().toISOString(),
     }).executeTakeFirst();
+    if (!productRow.insertId) {
+        throw new Error("Failed to insert product");
+    }
 
     const basketRow = await db.selectFrom("basket").selectAll().where(
         "name",
         "=",
         basket,
     ).executeTakeFirst();
-    if (!basket) {
+    if (!basketRow?.id) {
         throw new Error(`Basket ${basket} not found`);
     }
 
     await db.insertInto("basket_product").values({
         id: basketProductId(),
-        basketId: basketRow.id,
-        productId: productRow.id,
-    });
+        basketId: basketRow.id.toString(),
+        productId: productRow.insertId?.toString(),
+    }).execute();
 }
 
 async function getAllProducts(

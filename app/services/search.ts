@@ -1,9 +1,10 @@
 import { z } from "zod";
 import {
+    AUProductSchema,
     AUSearchResponseSchema,
+    NZProductSchema,
     NZSearchResponseSchema,
-} from "../../types/api.ts";
-import { transformToProducts } from "./transform.ts";
+} from "~/types/api";
 
 const NZ_BASE_URL = "https://www.woolworths.co.nz";
 const AU_BASE_URL = "https://www.woolworths.com.au";
@@ -23,13 +24,13 @@ const AU_HEADERS = {
 };
 
 interface SearchResult {
-    nz?: z.infer<typeof NZSearchResponseSchema>;
-    au?: z.infer<typeof AUSearchResponseSchema>;
+    nz: z.infer<typeof NZProductSchema>[];
+    au: z.infer<typeof AUProductSchema>[];
     error?: string;
 }
 
 export async function searchWoolworths(query: string): Promise<SearchResult> {
-    const result: SearchResult = {};
+    const result: SearchResult = { nz: [], au: [] };
 
     try {
         // Search NZ site
@@ -44,8 +45,20 @@ export async function searchWoolworths(query: string): Promise<SearchResult> {
             throw new Error(`NZ API returned ${nzResponse.status}`);
         }
 
-        const nzData = await nzResponse.json();
-        result.nz = NZSearchResponseSchema.parse(nzData);
+        const nzData = await nzResponse.json() as {
+            products: { items: { type: string }[] };
+        };
+        const nzProducts = {
+            products: {
+                items: nzData.products.items.filter((p) =>
+                    p.type === "Product"
+                ),
+            },
+        };
+        result.nz = NZSearchResponseSchema.parse(nzProducts).products.items
+            .filter((
+                item,
+            ) => item.type === "Product");
     } catch (error) {
         result.error = `NZ search failed: ${
             error instanceof Error ? error.message : String(error)
@@ -99,8 +112,11 @@ export async function searchWoolworths(query: string): Promise<SearchResult> {
         }
 
         const auData = await auResponse.json();
-        result.au = AUSearchResponseSchema.parse(auData);
+        result.au = AUSearchResponseSchema.parse(auData).Products.map((p) =>
+            p.Products[0]
+        );
     } catch (error) {
+        console.log("AU search failed", error);
         result.error = `${
             result.error ? result.error + "\n" : ""
         }AU search failed: ${
@@ -110,36 +126,3 @@ export async function searchWoolworths(query: string): Promise<SearchResult> {
 
     return result;
 }
-
-// Script entry point
-async function main() {
-    const query = process.argv[2] || "weetbix";
-    console.log(`Searching for "${query}"...`);
-
-    const result = await searchWoolworths(query);
-
-    if (result.error) {
-        console.error("Errors:", result.error);
-    }
-
-    if (result.nz && result.au) {
-        const products = transformToProducts(result.nz, result.au);
-        console.log(
-            "\nTransformed Products:",
-            JSON.stringify(products, null, 2),
-        );
-    } else {
-        console.log("\nRaw Results:");
-        if (result.nz) {
-            console.log("\nNZ Results:", JSON.stringify(result.nz, null, 2));
-        }
-        if (result.au) {
-            console.log("\nAU Results:", JSON.stringify(result.au, null, 2));
-        }
-    }
-}
-
-main().catch((error) => {
-    console.error("Script failed:", error);
-    process.exit(1);
-});

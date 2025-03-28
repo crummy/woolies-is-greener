@@ -52,6 +52,7 @@ export const NZProductSchema = z.object({
     eachUnitQuantity: z.null(),
     averageWeightPerUnit: z.null(),
     size: SizeSchema,
+
     hasShopperNotes: z.null(),
     productTag: z.object({
         tagType: z.string(),
@@ -78,7 +79,6 @@ export const NZProductSchema = z.object({
 export const NZSearchResponseSchema = z.object({
     products: z.object({
         items: z.array(NZProductSchema),
-        totalItems: z.number(),
     }),
 });
 
@@ -86,17 +86,17 @@ export const NZSearchResponseSchema = z.object({
 export const AUProductSchema = z.object({
     TileID: z.number(),
     Stockcode: z.number(),
-    Barcode: z.string(),
+    Barcode: z.string().nullable(),
     GtinFormat: z.number(),
-    CupPrice: z.number(),
-    InstoreCupPrice: z.number(),
+    CupPrice: z.number().nullable(),
+    InstoreCupPrice: z.number().nullable(),
     CupMeasure: z.string(),
     CupString: z.string(),
     InstoreCupString: z.string(),
     HasCupPrice: z.boolean(),
     InstoreHasCupPrice: z.boolean(),
-    Price: z.number(),
-    InstorePrice: z.number(),
+    Price: z.number().nullable(), // null if sold out
+    InstorePrice: z.number().nullable(), // null if sold out
     Name: z.string(),
     DisplayName: z.string(),
     UrlFriendlyName: z.string(),
@@ -129,7 +129,6 @@ export const AUSearchResponseSchema = z.object({
         DisplayName: z.string(),
     })),
     SearchResultsCount: z.number(),
-    VisualShoppingAisleResponse: z.array(z.unknown()),
 });
 
 // Schema.org Product Type (used in AU product details)

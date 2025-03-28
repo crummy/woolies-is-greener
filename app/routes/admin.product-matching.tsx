@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { AUProductSchema, NZProductSchema, NZSearchResponseSchema } from "~/types/api";
 import { z } from "zod";
-import { searchWoolworths } from "~/services/scrapers/search";
+import { searchWoolworths } from "~/services/search";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
 import { Form, useLoaderData, useNavigation, useSearchParams } from "@remix-run/react";
+import { linkProducts } from "~/services/db";
 
 type AUProduct = z.infer<typeof AUProductSchema>;
 type NZProduct = z.infer<typeof NZSearchResponseSchema>["products"]["items"][0];
@@ -38,8 +39,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
       );
     }
 
-    const auProducts = result.au ? result.au.Products.flatMap(group => group.Products) : [];
-    const nzProducts = result.nz ? result.nz.products.items : [];
+    const auProducts = result.au ?? [];
+    const nzProducts = result.nz ?? [];
 
     return json({ auProducts, nzProducts });
   } catch (error) {
@@ -55,7 +56,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({
-    request,
+    request, context
   }: ActionFunctionArgs) {
     const formData = await request.formData();
     const intent = formData.get("intent");
@@ -66,6 +67,13 @@ export async function action({
       case "match":
         const auProduct = JSON.parse(formData.get("auProduct") as string) as AUProduct;
         const nzProduct = JSON.parse(formData.get("nzProduct") as string) as NZProduct;
+        const title = formData.get("title") as string;
+        const categories = formData.getAll("categories");
+
+        for (const category of categories) {
+          await linkProducts(context.cloudflare.env, title, auProduct, nzProduct, category as "value" | "quality" | "luxury")
+        }
+
         return null;
       default:
         console.error("Invalid intent", intent);
@@ -79,7 +87,18 @@ export default function AdminProductMatching() {
   const { auProducts, nzProducts, error } = useLoaderData<LoaderData>();
   const [selectedAU, setSelectedAU] = useState<AUProduct | null>(null);
   const [selectedNZ, setSelectedNZ] = useState<NZProduct | null>(null);
-  const [searchParams] = useSearchParams()
+  const [searchParams] = useSearchParams();
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategory = (category: string) => {
+    const newCategories = new Set(selectedCategories);
+    if (newCategories.has(category)) {
+      newCategories.delete(category);
+    } else {
+      newCategories.add(category);
+    }
+    setSelectedCategories(newCategories);
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -175,18 +194,55 @@ export default function AdminProductMatching() {
       </div>
 
       {selectedAU && selectedNZ && (
-        <div className="mt-4 flex justify-center fixed bottom-0 w-full p-4">
-          <Form method="post">
-          <input type="hidden" name="intent" value="match"/>
+        <div className="mt-4 flex flex-col items-center fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+          <Form method="post" className="w-full max-w-2xl space-y-4">
+            <input type="hidden" name="intent" value="match"/>
             <input type="hidden" name="auProduct" value={JSON.stringify(selectedAU)} />
             <input type="hidden" name="nzProduct" value={JSON.stringify(selectedNZ)} />
-            <button
-              type="submit"
-              className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              disabled={isSubmitting}
-            >
-              Match Selected Products
-            </button>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Product Title
+              </label>
+              <input
+                type="text"
+                name="title"
+                required
+                defaultValue={selectedAU.Name}
+                className="w-full px-4 py-2 border rounded"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categories
+              </label>
+              <div className="flex gap-2">
+                {["Value", "Quality", "Luxury"].map((category) => (
+                  <label key={category} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="categories"
+                      value={category.toLowerCase()}
+                      checked={selectedCategories.has(category.toLowerCase())}
+                      onChange={() => toggleCategory(category.toLowerCase())}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">{category}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <button
+                type="submit"
+                className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting || selectedCategories.size === 0}
+              >
+                {isSubmitting ? "Matching..." : "Match Selected Products"}
+              </button>
+            </div>
           </Form>
         </div>
       )}
