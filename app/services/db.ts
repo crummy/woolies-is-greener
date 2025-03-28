@@ -19,6 +19,10 @@ export async function linkProducts(
         dialect: new D1Dialect({ database: env.DB }),
     });
 
+    if (auProduct.Price === null) {
+        throw new Error("AU product price is null");
+    }
+
     const productRow = await db.insertInto("product").values({
         id: productId(),
         title: title,

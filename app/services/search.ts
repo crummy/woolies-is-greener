@@ -48,17 +48,24 @@ export async function searchWoolworths(query: string): Promise<SearchResult> {
         const nzData = await nzResponse.json() as {
             products: { items: { type: string }[] };
         };
-        const nzProducts = {
-            products: {
-                items: nzData.products.items.filter((p) =>
-                    p.type === "Product"
-                ),
-            },
-        };
-        result.nz = NZSearchResponseSchema.parse(nzProducts).products.items
-            .filter((
-                item,
-            ) => item.type === "Product");
+
+        // Parse each product individually
+        result.nz = nzData.products.items.filter((p) => p.type === "Product")
+            .map((item) => {
+                try {
+                    return NZProductSchema.parse(item);
+                } catch (error) {
+                    console.error("Failed to parse NZ product:", {
+                        product: item,
+                        error: error instanceof Error
+                            ? error.message
+                            : String(error),
+                    });
+                    return null;
+                }
+            }).filter((product): product is z.infer<typeof NZProductSchema> =>
+                product !== null
+            );
     } catch (error) {
         result.error = `NZ search failed: ${
             error instanceof Error ? error.message : String(error)
@@ -112,11 +119,27 @@ export async function searchWoolworths(query: string): Promise<SearchResult> {
         }
 
         const auData = await auResponse.json();
-        result.au = AUSearchResponseSchema.parse(auData).Products.map((p) =>
-            p.Products[0]
-        );
+        const parsedResponse = AUSearchResponseSchema.parse(auData);
+
+        // Parse each product individually
+        result.au = parsedResponse.Products.flatMap((group) => {
+            return group.Products.map((product) => {
+                try {
+                    return AUProductSchema.parse(product);
+                } catch (error) {
+                    console.error("Failed to parse AU product:", {
+                        product,
+                        error: error instanceof Error
+                            ? error.message
+                            : String(error),
+                    });
+                    return null;
+                }
+            }).filter((product): product is z.infer<typeof AUProductSchema> =>
+                product !== null
+            );
+        });
     } catch (error) {
-        console.log("AU search failed", error);
         result.error = `${
             result.error ? result.error + "\n" : ""
         }AU search failed: ${
