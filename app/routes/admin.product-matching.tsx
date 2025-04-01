@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { AUProductSchema, NZProductSchema, NZSearchResponseSchema } from "~/types/api";
+import { useState, useMemo } from "react";
+import type { AUProductSchema, NZProductSchema } from "~/types/api";
 import { z } from "zod";
 import { searchWoolworths } from "~/services/search";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
@@ -8,7 +8,9 @@ import { Form, useLoaderData, useNavigation, useSearchParams } from "@remix-run/
 import { linkProducts } from "~/services/db";
 
 type AUProduct = z.infer<typeof AUProductSchema>;
-type NZProduct = z.infer<typeof NZSearchResponseSchema>["products"]["items"][0];
+type NZProduct = z.infer<typeof NZProductSchema>;
+
+type SortOption = "default" | "price-asc" | "price-desc";
 
 type LoaderData = {
   auProducts: AUProduct[];
@@ -89,6 +91,8 @@ export default function AdminProductMatching() {
   const [selectedNZ, setSelectedNZ] = useState<NZProduct | null>(null);
   const [searchParams] = useSearchParams();
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [auSort, setAuSort] = useState<SortOption>("default");
+  const [nzSort, setNzSort] = useState<SortOption>("default");
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -99,6 +103,24 @@ export default function AdminProductMatching() {
     }
     setSelectedCategories(newCategories);
   };
+
+  const sortedAuProducts = useMemo(() => {
+    if (auSort === "default") return auProducts;
+    return [...auProducts].sort((a, b) => {
+      const priceA = a.Price ?? 0;
+      const priceB = b.Price ?? 0;
+      return auSort === "price-asc" ? priceA - priceB : priceB - priceA;
+    });
+  }, [auProducts, auSort]);
+
+  const sortedNzProducts = useMemo(() => {
+    if (nzSort === "default") return nzProducts;
+    return [...nzProducts].sort((a, b) => {
+      const priceA = a.price.salePrice ?? 0;
+      const priceB = b.price.salePrice ?? 0;
+      return nzSort === "price-asc" ? priceA - priceB : priceB - priceA;
+    });
+  }, [nzProducts, nzSort]);
 
   return (
     <div className="container mx-auto p-4">
@@ -132,15 +154,26 @@ export default function AdminProductMatching() {
       <div className="grid grid-cols-2 gap-4">
         {/* AU Products */}
         <div className="border rounded p-4">
-          <h2 className="text-xl font-semibold mb-2">Australian Products</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Australian Products</h2>
+            <select
+              value={auSort}
+              onChange={(e) => setAuSort(e.target.value as SortOption)}
+              className="px-3 py-1 border rounded text-sm"
+            >
+              <option value="default">Default</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+            </select>
+          </div>
           <div className="space-y-2">
-            {auProducts.map((product) => (
+            {sortedAuProducts.map((product) => (
               <div
                 key={product.Stockcode}
                 className={`p-2 border rounded cursor-pointer ${
                   selectedAU?.Stockcode === product.Stockcode
-                    ? "border-blue-500 bg-blue-50"
-                    : "hover:bg-gray-50"
+                    ? "border-blue-200 bg-blue-50/50"
+                    : "hover:bg-gray-50/50 hover:border-gray-200"
                 }`}
                 onClick={() => setSelectedAU(product)}
               >
@@ -163,15 +196,26 @@ export default function AdminProductMatching() {
 
         {/* NZ Products */}
         <div className="border rounded p-4">
-          <h2 className="text-xl font-semibold mb-2">New Zealand Products</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">New Zealand Products</h2>
+            <select
+              value={nzSort}
+              onChange={(e) => setNzSort(e.target.value as SortOption)}
+              className="px-3 py-1 border rounded text-sm"
+            >
+              <option value="default">Default</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+            </select>
+          </div>
           <div className="space-y-2">
-            {nzProducts.map((product) => (
+            {sortedNzProducts.map((product) => (
               <div
                 key={product.sku}
                 className={`p-2 border rounded cursor-pointer ${
                   selectedNZ?.sku === product.sku
-                    ? "border-blue-500 bg-blue-50"
-                    : "hover:bg-gray-50"
+                    ? "border-blue-200 bg-blue-50/50"
+                    : "hover:bg-gray-50/50 hover:border-gray-200"
                 }`}
                 onClick={() => setSelectedNZ(product)}
               >
