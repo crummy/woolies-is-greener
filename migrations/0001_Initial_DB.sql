@@ -1,7 +1,7 @@
 -- Migration number: 0001 	 2025-03-28T08:44:28.327Z
 
 CREATE TABLE IF NOT EXISTS product (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL,
     title TEXT NOT NULL,
     nzPrice INTEGER NOT NULL,
     nzPriceOriginal INTEGER NOT NULL,
@@ -14,13 +14,13 @@ CREATE TABLE IF NOT EXISTS product (
 );
 
 CREATE TABLE IF NOT EXISTS basket (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
     description TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS basket_product (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL,
     basketId TEXT NOT NULL,
     productId TEXT NOT NULL,
     FOREIGN KEY (basketId) REFERENCES basket(id),

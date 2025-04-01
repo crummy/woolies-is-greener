@@ -3,7 +3,6 @@ import { Form, useActionData, useLoaderData, useNavigation, Link } from "@remix-
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
 import { DB } from "kysely-codegen";
-import type { Product } from "~/services/db";
 import { sql } from "kysely";
 
 // Define the type for a product with baskets
