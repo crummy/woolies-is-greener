@@ -1,144 +1,337 @@
-import { json, redirect, type ActionFunctionArgs } from "@remix-run/node";
-import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
-import { Kysely } from "kysely";
-import { D1Dialect } from "kysely-d1";
-import { DB } from "kysely-codegen";
-import { ulid } from "~/services/ulid";
+import { useState, useMemo } from "react";
+import type { AUProductSchema, NZProductSchema } from "~/types/api";
+import { z } from "zod";
+import { searchWoolworths } from "~/services/search";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { redirect, json } from "@remix-run/node";
+import { Form, useLoaderData, useNavigation, useSearchParams } from "@remix-run/react";
+import { linkProducts } from "~/services/db";
 
-type ActionData = 
-  | { success: true; newProductId?: string }
-  | { error: string };
+type AUProduct = z.infer<typeof AUProductSchema>;
+type NZProduct = z.infer<typeof NZProductSchema>;
 
-// No loader needed for a 'new' route typically
+type SortOption = "default" | "price-asc" | "price-desc";
 
-// Action to handle the creation
-export async function action({ request, context }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  const intent = formData.get("intent");
+type LoaderData = {
+  auProducts: AUProduct[];
+  nzProducts: NZProduct[];
+  error?: string;
+};
 
-  if (intent !== "create") {
-     return json<ActionData>({ error: "Invalid intent" }, { status: 400 });
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const searchTerm = url.searchParams.get("q");
+
+  if (!searchTerm) {
+    return json({ auProducts: [], nzProducts: [] });
   }
-
-  const db = new Kysely<DB>({
-    dialect: new D1Dialect({ database: context.cloudflare.env.DB }),
-  });
-
-  const title = formData.get("title");
-  const nzPrice = formData.get("nzPrice");
-  const nzPriceOriginal = formData.get("nzPriceOriginal");
-  const auPrice = formData.get("auPrice");
-  const auPriceOriginal = formData.get("auPriceOriginal");
-  const nzSku = formData.get("nzSku");
-  const auStockcode = formData.get("auStockcode");
-  const imageUrl = formData.get("imageUrl");
-
-  if (!title || !nzPrice || !nzPriceOriginal || !auPrice || !auPriceOriginal || !nzSku || !auStockcode) {
-    return json<ActionData>({ error: "Required fields are missing" }, { status: 400 });
-  }
-
-  const newProductId = `p_${ulid()}`;
 
   try {
-    await db.insertInto("product").values({
-      id: newProductId,
-      title: title.toString(),
-      nzPrice: parseInt(nzPrice.toString()),
-      nzPriceOriginal: parseInt(nzPriceOriginal.toString()),
-      auPrice: parseInt(auPrice.toString()),
-      auPriceOriginal: parseInt(auPriceOriginal.toString()),
-      nzSku: nzSku.toString(),
-      auStockcode: auStockcode.toString(),
-      imageUrl: imageUrl?.toString() || null,
-      updated: new Date().toISOString(),
-    }).executeTakeFirstOrThrow(); // Ensure insertion happened
+    console.log("Searching for", searchTerm);
+    const result = await searchWoolworths(searchTerm);
+    
+    if (result.error) {
+      return json(
+        { 
+          auProducts: [], 
+          nzProducts: [], 
+          error: result.error 
+        },
+        { status: 500 }
+      );
+    }
 
-    // Redirect to the new product's edit page or the list page
-    // return redirect(`/admin/products/${newProductId}`);
-    return redirect(`/admin/products`); // Redirecting to list for now
+    const auProducts = result.au ?? [];
+    const nzProducts = result.nz ?? [];
 
+    return json({ auProducts, nzProducts });
   } catch (error) {
-    console.error("Failed to create product:", error);
-    return json<ActionData>({ error: "Failed to create product." }, { status: 500 });
+    return json(
+      { 
+        auProducts: [], 
+        nzProducts: [], 
+        error: error instanceof Error ? error.message : "Failed to search products" 
+      },
+      { status: 500 }
+    );
   }
 }
 
-// The form component for creating a new product
-export default function NewProductRoute() {
-  const actionData = useActionData<typeof action>();
-  const navigation = useNavigation();
+export async function action({
+    request, context
+  }: ActionFunctionArgs) {
+    const formData = await request.formData();
+    const intent = formData.get("intent");
+    switch (intent) {
+      case "search":
+        const q = formData.get("q");
+        return redirect(`/admin/products/new?q=${q}`);
+      case "match":
+        const auProduct = JSON.parse(formData.get("auProduct") as string) as AUProduct;
+        const nzProduct = JSON.parse(formData.get("nzProduct") as string) as NZProduct;
+        const title = formData.get("title") as string;
+        const categories = formData.getAll("categories");
 
-  const isSubmitting = navigation.state === "submitting";
+        for (const category of categories) {
+          await linkProducts(context.cloudflare.env, title, auProduct, nzProduct, category as "value" | "quality" | "luxury")
+        }
+
+        return null;
+      default:
+        console.error("Invalid intent", intent);
+        return json({ error: "Invalid intent" }, { status: 400 });
+    }
+}
+
+export default function AdminProductMatching() {
+  const navigation = useNavigation();
+  const isMatching = navigation.state === "submitting" && navigation.formData?.get("intent") === "match";
+  const isSearching = navigation.state === "loading" && 
+                     navigation.location?.pathname === "/admin/products/new" &&
+                     navigation.location?.search?.includes("q=")
+
+  const { auProducts, nzProducts, error } = useLoaderData<LoaderData>();
+  const [selectedAU, setSelectedAU] = useState<AUProduct | null>(null);
+  const [selectedNZ, setSelectedNZ] = useState<NZProduct | null>(null);
+  const [searchParams] = useSearchParams();
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<SortOption>("default");
+  const [showUnavailable, setShowUnavailable] = useState<boolean>(true);
+
+  const toggleCategory = (category: string) => {
+    const newCategories = new Set(selectedCategories);
+    if (newCategories.has(category)) {
+      newCategories.delete(category);
+    } else {
+      newCategories.add(category);
+    }
+    setSelectedCategories(newCategories);
+  };
+
+  const sortedAuProducts = useMemo(() => {
+    let filtered = auProducts;
+    if (!showUnavailable) {
+      filtered = filtered.filter(p => p.IsPurchasable);
+    }
+    if (sortBy === "default") return filtered;
+    return [...filtered].sort((a, b) => {
+      const priceA = a.Price ?? 0;
+      const priceB = b.Price ?? 0;
+      return sortBy === "price-asc" ? priceA - priceB : priceB - priceA;
+    });
+  }, [auProducts, sortBy, showUnavailable]);
+
+  const sortedNzProducts = useMemo(() => {
+    let filtered = nzProducts;
+    if (!showUnavailable) {
+      filtered = filtered.filter(p => p.availabilityStatus === 'In Stock');
+    }
+    if (sortBy === "default") return filtered;
+    return [...filtered].sort((a, b) => {
+      const priceA = a.price.salePrice ?? 0;
+      const priceB = b.price.salePrice ?? 0;
+      return sortBy === "price-asc" ? priceA - priceB : priceB - priceA;
+    });
+  }, [nzProducts, sortBy, showUnavailable]);
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Create New Product</h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Product Matching</h1>
+      
+      <div className="mb-4">
+        <Form method="post" className="flex gap-2">
+          <input type="hidden" name="intent" value="search"/>
+          <input
+            type="text"
+            name="q"
+            placeholder="Enter search term..."
+            defaultValue={searchParams.get("q") ?? ""}
+            className="flex-1 px-4 py-2 border rounded"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Search
+          </button>
+        </Form>
+      </div>
 
-      {actionData && "error" in actionData && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {actionData.error}
+      {isSearching && (
+        <div className="my-4 p-4 text-center text-gray-600">
+            Searching for products...
         </div>
       )}
 
-      <Form method="post" className="space-y-4 border rounded p-4">
-        <input type="hidden" name="intent" value="create" />
-        
-        <div>
-          <label className="block mb-1 font-medium">Title</label>
-          <input type="text" name="title" required className="w-full p-2 border rounded" />
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
+          {error}
         </div>
+      )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-1 font-medium">NZ Price</label>
-            <input type="number" name="nzPrice" required className="w-full p-2 border rounded" />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium">NZ Original Price</label>
-            <input type="number" name="nzPriceOriginal" required className="w-full p-2 border rounded" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-1 font-medium">AU Price</label>
-            <input type="number" name="auPrice" required className="w-full p-2 border rounded" />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium">AU Original Price</label>
-            <input type="number" name="auPriceOriginal" required className="w-full p-2 border rounded" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-1 font-medium">NZ SKU</label>
-            <input type="text" name="nzSku" required className="w-full p-2 border rounded" />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium">AU Stockcode</label>
-            <input type="text" name="auStockcode" required className="w-full p-2 border rounded" />
-          </div>
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Image URL</label>
-          <input type="url" name="imageUrl" className="w-full p-2 border rounded" />
-        </div>
-
-        <div className="flex gap-2 justify-end">
-          <button
-            type="submit"
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
-            disabled={isSubmitting}
+      <div className="mb-4 p-4 border rounded bg-gray-50 flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <label htmlFor="sort-select" className="text-sm font-medium text-gray-700">Sort by:</label>
+          <select
+            id="sort-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="px-3 py-1 border rounded text-sm"
           >
-            {isSubmitting ? "Creating..." : "Create Product"}
-          </button>
-          <Link to="/admin/products" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-            Cancel
-          </Link>
+            <option value="default">Default</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+          </select>
         </div>
-      </Form>
+        <div className="flex items-center gap-2">
+            <input 
+                type="checkbox" 
+                id="show-unavailable"
+                checked={showUnavailable}
+                onChange={(e) => setShowUnavailable(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+            />
+            <label htmlFor="show-unavailable" className="text-sm font-medium text-gray-700">Show unavailable products</label>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* AU Products */}
+        <div className="border rounded p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Australian Products</h2>
+          </div>
+          <div className="space-y-2">
+            {sortedAuProducts.map((product) => {
+              const isAvailable = product.IsPurchasable;
+              return (
+                <div
+                  key={product.Stockcode}
+                  className={`p-2 border rounded cursor-pointer ${
+                    selectedAU?.Stockcode === product.Stockcode
+                      ? "border-blue-200 bg-blue-50/50"
+                      : "hover:bg-gray-50/50 hover:border-gray-200"
+                  } ${!isAvailable ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => isAvailable && setSelectedAU(product)}
+                >
+                  <div className="flex items-start gap-2">
+                    <img
+                      src={product.SmallImageFile}
+                      alt={product.Name}
+                      className="w-16 h-16 object-contain"
+                    />
+                    <div>
+                      <h3 className="font-medium">{product.Name}</h3>
+                      <p className="text-sm text-gray-600">{product.PackageSize}</p>
+                      <p className="text-sm">
+                        <span className="font-bold">${product.Price?.toFixed(2)}</span>
+                        {product.WasPrice && product.WasPrice !== product.Price && (
+                          <span className="ml-2 line-through text-gray-500">${product.WasPrice.toFixed(2)}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* NZ Products */}
+        <div className="border rounded p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">New Zealand Products</h2>
+          </div>
+          <div className="space-y-2">
+            {sortedNzProducts.map((product) => {
+              const isAvailable = product.availabilityStatus === 'In Stock';
+              return (
+                <div
+                  key={product.sku}
+                  className={`p-2 border rounded cursor-pointer ${
+                    selectedNZ?.sku === product.sku
+                      ? "border-blue-200 bg-blue-50/50"
+                      : "hover:bg-gray-50/50 hover:border-gray-200"
+                  } ${!isAvailable ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => isAvailable && setSelectedNZ(product)}
+                >
+                  <div className="flex items-start gap-2">
+                    <img
+                      src={product.images.small}
+                      alt={product.name}
+                      className="w-16 h-16 object-contain"
+                    />
+                    <div>
+                      <h3 className="font-medium">{product.name}</h3>
+                      <p className="text-sm text-gray-600">{product.size.volumeSize}</p>
+                      <p className="text-sm">
+                        <span className="font-bold">${product.price.salePrice?.toFixed(2)}</span>
+                        {product.price.originalPrice && product.price.originalPrice !== product.price.salePrice && (
+                          <span className="ml-2 line-through text-gray-500">${product.price.originalPrice.toFixed(2)}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {selectedAU && selectedNZ && (
+        <div className="mt-4 flex flex-col items-center fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+          <Form method="post" className="w-full max-w-2xl space-y-4">
+            <input type="hidden" name="intent" value="match"/>
+            <input type="hidden" name="auProduct" value={JSON.stringify(selectedAU)} />
+            <input type="hidden" name="nzProduct" value={JSON.stringify(selectedNZ)} />
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Product Title
+              </label>
+              <input
+                type="text"
+                name="title"
+                required
+                defaultValue={selectedAU.Name}
+                className="w-full px-4 py-2 border rounded"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categories
+              </label>
+              <div className="flex gap-2">
+                {["Value", "Quality", "Luxury"].map((category) => (
+                  <label key={category} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="categories"
+                      value={category.toLowerCase()}
+                      checked={selectedCategories.has(category.toLowerCase())}
+                      onChange={() => toggleCategory(category.toLowerCase())}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">{category}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <button
+                type="submit"
+                className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isMatching || selectedCategories.size === 0}
+              >
+                {isMatching ? "Matching..." : "Match Selected Products"}
+              </button>
+            </div>
+          </Form>
+        </div>
+      )}
     </div>
   );
 } 

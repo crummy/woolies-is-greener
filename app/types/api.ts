@@ -56,7 +56,7 @@ export const NZProductSchema = z.object({
     hasShopperNotes: z.null(),
     productTag: z.object({
         tagType: z.string(),
-        multiBuy: z.null(),
+        multiBuy: z.unknown().nullable(),
         bonusPoints: z.null(),
         targetedOffer: z.null(),
         boostOffer: z.null(),

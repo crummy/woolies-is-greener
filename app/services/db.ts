@@ -23,8 +23,9 @@ export async function linkProducts(
         throw new Error("AU product price is null");
     }
 
+    let newProductId = productId();
     const productRow = await db.insertInto("product").values({
-        id: productId(),
+        id: newProductId,
         title: title,
         nzPrice: nzProduct.price.salePrice,
         nzPriceOriginal: nzProduct.price.originalPrice,
@@ -50,8 +51,8 @@ export async function linkProducts(
 
     await db.insertInto("basket_product").values({
         id: basketProductId(),
-        basketId: basketRow.id.toString(),
-        productId: productRow.insertId?.toString(),
+        basketId: basketRow.id,
+        productId: newProductId,
     }).execute();
 }
 
