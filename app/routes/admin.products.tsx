@@ -1,53 +1,80 @@
 import { json, LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, useNavigation, Link } from "@remix-run/react";
+import { Form, useActionData, useLoaderData, useNavigation, Link, useSearchParams } from "@remix-run/react";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
-import { DB } from "kysely-codegen";
+import { DB, Product, Basket } from "kysely-codegen";
 import { sql } from "kysely";
+import { ProductCard } from "~/components/ProductCard.tsx";
 
-// Define the type for a product with baskets
+// Define the type for a product with baskets (including basket IDs)
 type ProductFromDB = DB['product']; 
-interface ProductWithBaskets extends ProductFromDB {
-  baskets: string[];
+// Export the interface
+export interface ProductWithBasketObjects extends ProductFromDB {
+  baskets: { id: string; name: string }[];
 }
 
 // ActionData type for this route (allows error or empty success object)
 type ActionData = { error: string } | { /* Empty object for success */ };
 
-export async function loader({ context }: LoaderFunctionArgs) {
+// Define LoaderData type
+type LoaderData = {
+  products: ProductWithBasketObjects[];
+  // Use Pick to specify only id and name are present
+  baskets: Pick<Basket, 'id' | 'name'>[]; 
+  selectedBasketId: string | null;
+};
+
+export async function loader({ context, request }: LoaderFunctionArgs): Promise<Response> {
   const db = new Kysely<DB>({
     dialect: new D1Dialect({ database: context.cloudflare.env.DB }),
   });
 
-  // Single query to fetch products and concatenated basket names
+  const url = new URL(request.url);
+  const selectedBasketId = url.searchParams.get('basketId');
+
+  // Fetch all baskets for the filter buttons
+  const allBaskets = await db.selectFrom("basket").select(['id', 'name']).execute();
+
+  // Fetch products and aggregate basket info (id:name)
   const productsData = await db
     .selectFrom("product")
     .leftJoin("basket_product", "basket_product.productId", "product.id")
     .leftJoin("basket", "basket.id", "basket_product.basketId")
-    // Select all columns from the product table
     .selectAll("product")
-    // Use GROUP_CONCAT to aggregate basket names into a single string
-    // Specify the expected return type as string | null
-    .$call((qb) => qb.select(sql<string | null>`GROUP_CONCAT(basket.name)`.as("basketNames")))
-    // Group by product ID to ensure one row per product
+    // Concatenate ID and Name, separated by a colon, rows separated by comma
+    .$call((qb) => qb.select(sql<string | null>`GROUP_CONCAT(basket.id || ':' || basket.name)`.as("basketInfo")))
     .groupBy("product.id")
     .execute();
 
-  // Process the result to split concatenated names into an array
-  const productsWithBaskets = productsData.map(productRow => {
-    // Extract the concatenated basket names string
-    const { basketNames, ...productFields } = productRow;
-    
-    // Split the string into an array, handle null/empty case
-    const baskets = basketNames ? basketNames.split(',') : [];
+  // Process the result to create the baskets array with IDs and names
+  const processedProducts = productsData.map(productRow => {
+    const { basketInfo, ...productFields } = productRow;
+    const baskets = basketInfo
+      ? basketInfo.split(',').map(info => {
+          // Find the first colon to split, handle names containing colons
+          const colonIndex = info.indexOf(':');
+          if (colonIndex === -1) return null; // Malformed data?
+          const id = info.substring(0, colonIndex);
+          const name = info.substring(colonIndex + 1);
+          return { id, name };
+        }).filter(Boolean) as { id: string; name: string }[] // Filter out any nulls from malformed data
+      : [];
     
     return {
       ...productFields,
-      baskets, // Add the array of basket names
-    } as ProductWithBaskets; // Assert type
+      baskets,
+    } as ProductWithBasketObjects; 
   });
 
-  return json({ products: productsWithBaskets });
+  // Filter products if a basketId is selected
+  let displayedProducts = processedProducts;
+  if (selectedBasketId) {
+      displayedProducts = processedProducts.filter(p => 
+          p.baskets.some(b => b.id === selectedBasketId)
+      );
+  }
+
+  return json<LoaderData>({ products: displayedProducts, baskets: allBaskets, selectedBasketId });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -77,17 +104,76 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function AdminProducts() {
-  const { products } = useLoaderData<typeof loader>();
+  // Add explicit type to useLoaderData
+  const { products, baskets, selectedBasketId } = useLoaderData<LoaderData>(); 
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+
+  // Calculate totals
+  const totals = products.reduce(
+    (acc, product) => {
+      acc.au += product.auPrice || 0;
+      acc.nz += product.nzPrice || 0;
+      return acc;
+    },
+    { au: 0, nz: 0 }
+  );
 
   // Check if there's an error message to display
   const errorMessage = actionData && 'error' in actionData ? actionData.error : null;
 
+  const baseButtonClass = "px-3 py-1 rounded text-sm border";
+  const inactiveButtonClass = "bg-gray-100 text-gray-700 hover:bg-gray-200";
+  const activeButtonClass = "bg-blue-500 text-white border-blue-600";
+
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
+      {/* Combined Header and Filters */}
+      <div className="flex justify-between items-center mb-6"> 
         <h1 className="text-2xl font-bold">Manage Products</h1>
+
+        {/* Totals and Filters Section - MOVED HERE */}
+        {/* Removed bg-gray-50, border, p-3 */} 
+        <div className="flex items-center gap-6"> {/* Increased gap slightly */} 
+          {/* Totals Display */} 
+          <div className="flex gap-4">
+            {/* Removed text-gray-700 */} 
+            <p className="text-sm font-medium">
+              AU Total: <span className="font-bold">${totals.au.toFixed(2)}</span>
+            </p>
+            {/* Removed text-gray-700 */} 
+            <p className="text-sm font-medium">
+              NZ Total: <span className="font-bold">${totals.nz.toFixed(2)}</span>
+            </p>
+          </div>
+
+          {/* Filter Buttons */} 
+          <div className="flex gap-2 items-center">
+             {/* Removed text-gray-700 */} 
+            <span className="text-sm font-medium">Filter by Basket:</span>
+            {/* "Show All" Button */} 
+            <Link
+              to="/admin/products"
+              className={`${baseButtonClass} ${!selectedBasketId ? activeButtonClass : inactiveButtonClass}`}
+              preventScrollReset // Prevent scrolling to top on navigation
+            >
+              Show All
+            </Link>
+            {/* Basket Filter Buttons */} 
+            {baskets.map((basket) => (
+              <Link
+                key={basket.id}
+                to={`/admin/products?basketId=${basket.id}`}
+                className={`${baseButtonClass} ${selectedBasketId === basket.id ? activeButtonClass : inactiveButtonClass}`}
+                preventScrollReset // Prevent scrolling to top on navigation
+              >
+                {basket.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* "Create New Product" Button - Remains at the end */}
         <Link
           to="/admin/products/new"
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -104,70 +190,12 @@ export default function AdminProducts() {
       )}
 
       <div className="grid gap-4">
-        {products.map((product: ProductWithBaskets) => (
-          <div key={product.id} className="border rounded p-4">
-            <div className="flex justify-between items-start">
-              <div className="flex gap-4 flex-grow">
-                {product.imageUrl && (
-                  <img 
-                    src={product.imageUrl} 
-                    alt={product.title}
-                    className="w-24 h-24 object-cover rounded flex-shrink-0"
-                  />
-                )}
-                <div className="flex-grow">
-                  <h3 className="text-lg font-semibold">{product.title}</h3>
-                  {product.baskets && product.baskets.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {product.baskets.map((basketName: string) => (
-                        <span 
-                          key={basketName}
-                          className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full"
-                        >
-                          {basketName}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <div>
-                      <p className="text-sm text-gray-600">NZ Price: ${product.nzPrice}</p>
-                      <p className="text-sm text-gray-500">Original: ${product.nzPriceOriginal}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">AU Price: ${product.auPrice}</p>
-                      <p className="text-sm text-gray-500">Original: ${product.auPriceOriginal}</p>
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600">NZ SKU: {product.nzSku}</p>
-                    <p className="text-sm text-gray-600">AU Stockcode: {product.auStockcode}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2 flex-shrink-0 ml-4">
-                <Link
-                  to={`/admin/products/${product.id}`}
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
-                >
-                  Edit
-                </Link>
-                <Form method="post">
-                  <input type="hidden" name="intent" value="delete" />
-                  <input type="hidden" name="id" value={product.id ?? ""} />
-                  <button
-                    type="submit"
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
-                    disabled={navigation.state === "submitting" && navigation.formData?.get('id') === product.id}
-                  >
-                    {navigation.state === "submitting" && navigation.formData?.get('id') === product.id
-                      ? "Deleting..."
-                      : "Delete"}
-                  </button>
-                </Form>
-              </div>
-            </div>
-          </div>
+        {products.map((product: ProductWithBasketObjects) => (
+          <ProductCard 
+            key={product.id} 
+            product={product} 
+            navigation={navigation} 
+          />
         ))}
       </div>
     </div>

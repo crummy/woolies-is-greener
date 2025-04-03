@@ -1,11 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import type { AUProductSchema, NZProductSchema } from "~/types/api";
 import { z } from "zod";
 import { searchWoolworths } from "~/services/search";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
-import { Form, useLoaderData, useNavigation, useSearchParams } from "@remix-run/react";
+import { Form, useActionData, useNavigation, useSearchParams, useLoaderData } from "@remix-run/react";
 import { linkProducts } from "~/services/db";
+import { ProductMatchCard } from "~/components/ProductMatchCard.tsx";
+import { Toast } from "~/components/Toast.tsx";
 
 type AUProduct = z.infer<typeof AUProductSchema>;
 type NZProduct = z.infer<typeof NZProductSchema>;
@@ -17,6 +19,11 @@ type LoaderData = {
   nzProducts: NZProduct[];
   error?: string;
 };
+
+type ActionData = 
+  | { error: string; success?: never }
+  | { success: string; error?: never }
+  | null;
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
@@ -76,7 +83,7 @@ export async function action({
           await linkProducts(context.cloudflare.env, title, auProduct, nzProduct, category as "value" | "quality" | "luxury")
         }
 
-        return null;
+        return json({ success: "Product matched successfully!" });
       default:
         console.error("Invalid intent", intent);
         return json({ error: "Invalid intent" }, { status: 400 });
@@ -85,6 +92,7 @@ export async function action({
 
 export default function AdminProductMatching() {
   const navigation = useNavigation();
+  const actionData = useActionData<ActionData>();
   const isMatching = navigation.state === "submitting" && navigation.formData?.get("intent") === "match";
   const isSearching = navigation.state === "loading" && 
                      navigation.location?.pathname === "/admin/products/new" &&
@@ -97,6 +105,27 @@ export default function AdminProductMatching() {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>("default");
   const [showUnavailable, setShowUnavailable] = useState<boolean>(true);
+
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [showToast, setShowToast] = useState<boolean>(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (actionData?.success) {
+      setToastMessage(actionData.success);
+      setShowToast(true);
+      setSelectedAU(null);
+      setSelectedNZ(null);
+      setSelectedCategories(new Set());
+      if (searchInputRef.current) {
+        searchInputRef.current.value = "";
+      }
+    } else if (actionData?.error) {
+      setToastMessage(actionData.error);
+      setShowToast(true);
+    }
+  }, [actionData]);
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -147,6 +176,7 @@ export default function AdminProductMatching() {
             placeholder="Enter search term..."
             defaultValue={searchParams.get("q") ?? ""}
             className="flex-1 px-4 py-2 border rounded"
+            ref={searchInputRef}
           />
           <button
             type="submit"
@@ -202,38 +232,14 @@ export default function AdminProductMatching() {
             <h2 className="text-xl font-semibold">Australian Products</h2>
           </div>
           <div className="space-y-2">
-            {sortedAuProducts.map((product) => {
-              const isAvailable = product.IsPurchasable;
-              return (
-                <div
-                  key={product.Stockcode}
-                  className={`p-2 border rounded cursor-pointer ${
-                    selectedAU?.Stockcode === product.Stockcode
-                      ? "border-blue-200 bg-blue-50/50"
-                      : "hover:bg-gray-50/50 hover:border-gray-200"
-                  } ${!isAvailable ? 'opacity-50 pointer-events-none' : ''}`}
-                  onClick={() => isAvailable && setSelectedAU(product)}
-                >
-                  <div className="flex items-start gap-2">
-                    <img
-                      src={product.SmallImageFile}
-                      alt={product.Name}
-                      className="w-16 h-16 object-contain"
-                    />
-                    <div>
-                      <h3 className="font-medium">{product.Name}</h3>
-                      <p className="text-sm text-gray-600">{product.PackageSize}</p>
-                      <p className="text-sm">
-                        <span className="font-bold">${product.Price?.toFixed(2)}</span>
-                        {product.WasPrice && product.WasPrice !== product.Price && (
-                          <span className="ml-2 line-through text-gray-500">${product.WasPrice.toFixed(2)}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {sortedAuProducts.map((product) => (
+              <ProductMatchCard
+                key={product.Stockcode}
+                product={product}
+                isSelected={selectedAU?.Stockcode === product.Stockcode}
+                onClick={() => product.IsPurchasable && setSelectedAU(product)} 
+              />
+            ))}
           </div>
         </div>
 
@@ -243,38 +249,14 @@ export default function AdminProductMatching() {
             <h2 className="text-xl font-semibold">New Zealand Products</h2>
           </div>
           <div className="space-y-2">
-            {sortedNzProducts.map((product) => {
-              const isAvailable = product.availabilityStatus === 'In Stock';
-              return (
-                <div
-                  key={product.sku}
-                  className={`p-2 border rounded cursor-pointer ${
-                    selectedNZ?.sku === product.sku
-                      ? "border-blue-200 bg-blue-50/50"
-                      : "hover:bg-gray-50/50 hover:border-gray-200"
-                  } ${!isAvailable ? 'opacity-50 pointer-events-none' : ''}`}
-                  onClick={() => isAvailable && setSelectedNZ(product)}
-                >
-                  <div className="flex items-start gap-2">
-                    <img
-                      src={product.images.small}
-                      alt={product.name}
-                      className="w-16 h-16 object-contain"
-                    />
-                    <div>
-                      <h3 className="font-medium">{product.name}</h3>
-                      <p className="text-sm text-gray-600">{product.size.volumeSize}</p>
-                      <p className="text-sm">
-                        <span className="font-bold">${product.price.salePrice?.toFixed(2)}</span>
-                        {product.price.originalPrice && product.price.originalPrice !== product.price.salePrice && (
-                          <span className="ml-2 line-through text-gray-500">${product.price.originalPrice.toFixed(2)}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {sortedNzProducts.map((product) => (
+              <ProductMatchCard
+                key={product.sku}
+                product={product}
+                isSelected={selectedNZ?.sku === product.sku}
+                onClick={() => product.availabilityStatus === 'In Stock' && setSelectedNZ(product)} 
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -332,6 +314,13 @@ export default function AdminProductMatching() {
           </Form>
         </div>
       )}
+
+      <Toast 
+        message={toastMessage} 
+        type={actionData?.success ? 'success' : 'error'}
+        show={showToast} 
+        onClose={() => setShowToast(false)} 
+      />
     </div>
   );
 } 
