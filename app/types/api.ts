@@ -50,7 +50,7 @@ export const NZProductSchema = z.object({
     quantity: QuantitySchema,
     stockLevel: z.number(),
     eachUnitQuantity: z.null(),
-    averageWeightPerUnit: z.null(),
+    averageWeightPerUnit: z.number().nullable(),
     size: SizeSchema,
 
     hasShopperNotes: z.null(),
@@ -115,7 +115,7 @@ export const AUProductSchema = z.object({
     IsPurchasable: z.boolean(),
     DisplayQuantity: z.number(),
     SapCategories: z.null(),
-    Brand: z.string(),
+    Brand: z.string().nullable(),
     AdditionalAttributes: z.record(z.unknown()),
     DetailsImagePaths: z.array(z.string().url()),
     Variety: z.string().nullable(),

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
 import type { DB, Basket, Product } from "kysely-codegen"; // Ensure types are available
-import { convertNzdToAud, convertAudToNzd } from "~/services/currency.ts"; // Import conversion functions
+import { convertNzdToAud, convertAudToNzd, NZD_TO_AUD_RATE } from "~/services/currency.ts"; // Import conversion functions
 import { auLink, nzLink } from "~/services/source.ts"; // Import link functions
 
 export const meta: MetaFunction = () => {
@@ -140,10 +140,10 @@ export default function Index() {
       {/* Header */}
       <header className="text-center mb-10 sm:mb-12">
         <h1 className="text-3xl sm:text-4xl font-bold text-teal-800 mb-2">
-          Compare Grocery Prices
+        Where The Woolies Is Greener
         </h1>
         <p className="text-lg sm:text-xl text-teal-700">
-          Between Australia and New Zealand
+          An experiment in grocery price comparison across the ditch
         </p>
       </header>
 
@@ -243,7 +243,7 @@ export default function Index() {
                             <span className="truncate">{product.title}</span> 
                             {/* Removed glowClass from <a> */}
                             <a 
-                              href={auLink(product)} 
+                              href={auLink(product.auStockcode)} 
                               target="_blank" 
                               rel="noopener noreferrer" 
                               className={`text-right hover:underline flex items-center justify-end`} // Added flex for dot alignment
@@ -254,7 +254,7 @@ export default function Index() {
                             </a>
                             {/* Removed glowClass from <a> */}
                             <a 
-                              href={nzLink(product)} 
+                              href={nzLink(product.nzSku)} 
                               target="_blank" 
                               rel="noopener noreferrer" 
                               className={`text-right hover:underline flex items-center justify-end`} // Added flex for dot alignment
@@ -279,6 +279,19 @@ export default function Index() {
       {!selectedBasketId && allBaskets.length > 0 && (
          <div className="text-center text-gray-600 mt-8">Please select a basket to see prices.</div>
       )}
+
+      <footer className="mt-12 pt-6 border-t border-gray-300 text-center text-xs sm:text-sm text-gray-500 max-w-2xl mx-auto"> {/* Moved common styles here, changed color */} 
+        <p>
+          This project is designed to compare approximate costs of similar items between NZ and Aus. A lot of Kiwis are heading across for jobs and I wanted to see if some basic costs were similar or if the higher wages would get absorbed. I've attempted to match like-for-like, but sometimes had to find equivalents. I ignored sales prices where suitable. Hope you find this use and informative!
+        </p>
+        <p className="mt-2">
+         Some facts: This website was generated on {new Date().toLocaleDateString()}. At that time, the NZD/AUD exchange rate was {NZD_TO_AUD_RATE}. I made about 80% of it with AI. And it was inspired by a $7.50 avocado I saw in Melbourne.
+         </p>
+        <p className="mt-2">
+           Feedback? <a href="mailto:crummynz@gmail.com" className="text-blue-600 hover:underline">Send me an email</a>.
+        </p>
+        <p className="mt-2">- Malcolm Crum</p>
+      </footer>
 
     </div>
   );

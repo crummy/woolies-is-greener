@@ -79,8 +79,28 @@ export async function action({
         const title = formData.get("title") as string;
         const categories = formData.getAll("categories");
 
+        // Read price overrides (optional)
+        const auPriceOverrideStr = formData.get("auPriceOverride") as string | null;
+        const nzPriceOverrideStr = formData.get("nzPriceOverride") as string | null;
+
+        // Determine final prices (use override if valid, otherwise original)
+        const finalAuPrice = auPriceOverrideStr && !isNaN(parseFloat(auPriceOverrideStr)) 
+                              ? parseFloat(auPriceOverrideStr) 
+                              : auProduct.Price;
+        const finalNzPrice = nzPriceOverrideStr && !isNaN(parseFloat(nzPriceOverrideStr))
+                              ? parseFloat(nzPriceOverrideStr)
+                              : nzProduct.price.salePrice;
+
+        // Create modified product objects with potentially overridden prices
+        const finalAuProduct = { ...auProduct, Price: finalAuPrice };
+        const finalNzProduct = { 
+          ...nzProduct, 
+          price: { ...nzProduct.price, salePrice: finalNzPrice } 
+        };
+
         for (const category of categories) {
-          await linkProducts(context.cloudflare.env, title, auProduct, nzProduct, category as "value" | "quality" | "luxury")
+          // Pass the potentially modified product objects to linkProducts
+          await linkProducts(context.cloudflare.env, title, finalAuProduct, finalNzProduct, category as "value" | "quality" | "luxury")
         }
 
         return json({ success: "Product matched successfully!" });
@@ -106,6 +126,10 @@ export default function AdminProductMatching() {
   const [sortBy, setSortBy] = useState<SortOption>("default");
   const [showUnavailable, setShowUnavailable] = useState<boolean>(true);
 
+  // Add state for price overrides
+  const [auPriceOverride, setAuPriceOverride] = useState<string>("");
+  const [nzPriceOverride, setNzPriceOverride] = useState<string>("");
+
   const [toastMessage, setToastMessage] = useState<string>("");
   const [showToast, setShowToast] = useState<boolean>(false);
 
@@ -118,6 +142,8 @@ export default function AdminProductMatching() {
       setSelectedAU(null);
       setSelectedNZ(null);
       setSelectedCategories(new Set());
+      setAuPriceOverride(""); // Clear override inputs
+      setNzPriceOverride(""); // Clear override inputs
       if (searchInputRef.current) {
         searchInputRef.current.value = "";
       }
@@ -237,7 +263,7 @@ export default function AdminProductMatching() {
                 key={product.Stockcode}
                 product={product}
                 isSelected={selectedAU?.Stockcode === product.Stockcode}
-                onClick={() => product.IsPurchasable && setSelectedAU(product)} 
+                onClick={() => setSelectedAU(product)} 
               />
             ))}
           </div>
@@ -254,7 +280,7 @@ export default function AdminProductMatching() {
                 key={product.sku}
                 product={product}
                 isSelected={selectedNZ?.sku === product.sku}
-                onClick={() => product.availabilityStatus === 'In Stock' && setSelectedNZ(product)} 
+                onClick={() => setSelectedNZ(product)} 
               />
             ))}
           </div>
@@ -299,6 +325,38 @@ export default function AdminProductMatching() {
                     <span className="text-sm text-gray-700">{category}</span>
                   </label>
                 ))}
+              </div>
+            </div>
+
+            {/* Price Override Inputs */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    AU Price Override (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="auPriceOverride"
+                    placeholder={`Current: $${selectedAU?.Price?.toFixed(2) ?? 'N/A'}`}
+                    value={auPriceOverride}
+                    onChange={(e) => setAuPriceOverride(e.target.value)}
+                    className="w-full px-3 py-1.5 border rounded text-sm"
+                  />
+              </div>
+              <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    NZ Price Override (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="nzPriceOverride"
+                    placeholder={`Current: $${selectedNZ?.price.salePrice?.toFixed(2) ?? 'N/A'}`}
+                    value={nzPriceOverride}
+                    onChange={(e) => setNzPriceOverride(e.target.value)}
+                    className="w-full px-3 py-1.5 border rounded text-sm"
+                  />
               </div>
             </div>
 

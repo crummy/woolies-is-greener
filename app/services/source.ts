@@ -1,9 +1,9 @@
-import { Product } from "kysely-codegen";
+// import { Product } from "kysely-codegen";
 
-export function auLink(product: Pick<Product, "auStockcode">) {
-    return `https://www.woolworths.com.au/shop/productdetails/${product.auStockcode}`;
+export function auLink(auStockcode: string) {
+    return `https://www.woolworths.com.au/shop/productdetails/${auStockcode}`;
 }
 
-export function nzLink(product: Pick<Product, "nzSku">) {
-    return `https://www.woolworths.co.nz/shop/productdetails?stockcode=${product.nzSku}`;
+export function nzLink(nzSku: string) {
+    return `https://www.woolworths.co.nz/shop/productdetails?stockcode=${nzSku}`;
 }
