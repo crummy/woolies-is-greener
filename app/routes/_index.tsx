@@ -1,11 +1,12 @@
-import type { MetaFunction, LoaderFunctionArgs } from "react-router";
-import { useLoaderData, Link } from "react-router";
+import type { MetaFunction } from "react-router";
+import { Link } from "react-router";
 import { useState } from "react";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
 import type { DB, Basket, Product } from "kysely-codegen"; // Ensure types are available
-import { convertNzdToAud, convertAudToNzd, NZD_TO_AUD_RATE } from "~/services/currency.ts"; // Import conversion functions
-import { auLink, nzLink } from "~/services/source.ts"; // Import link functions
+import { convertNzdToAud, convertAudToNzd, NZD_TO_AUD_RATE } from "~/services/currency"; // Import conversion functions
+import { auLink, nzLink } from "~/services/source"; // Import link functions
+import type { Route } from "./+types/_index";
 
 export const meta: MetaFunction = () => {
   return [
@@ -14,16 +15,8 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-// Define LoaderData type
-type LoaderData = {
-  allBaskets: Pick<Basket, 'id' | 'name' | 'description'>[];
-  selectedBasketId: string | null;
-  productsInBasket: Pick<Product, 'id' | 'title' | 'auPrice' | 'nzPrice' | 'auStockcode' | 'nzSku'>[];
-  totalAuPrice: number;
-  totalNzPrice: number;
-};
 
-export async function loader({ context, request }: LoaderFunctionArgs): Promise<Response> {
+export async function loader({ context, request }: Route.LoaderArgs) {
   const db = new Kysely<DB>({
     dialect: new D1Dialect({ database: context.cloudflare.env.DB }),
   });
@@ -78,19 +71,19 @@ export async function loader({ context, request }: LoaderFunctionArgs): Promise<
 
   const today = new Date().toLocaleDateString();
 
-  return Response.json({
+  return {
     allBaskets,
     selectedBasketId,
     productsInBasket,
     totalAuPrice,
     totalNzPrice,
     today,
-  });
+  };
 }
 
 
-export default function Index() {
-  const { allBaskets, selectedBasketId, productsInBasket, totalAuPrice, totalNzPrice, today } = useLoaderData<LoaderData>();
+export default function Index({ loaderData }: Route.ComponentProps) {
+  const { allBaskets, selectedBasketId, productsInBasket, totalAuPrice, totalNzPrice, today } = loaderData;
 
   // State for selected display currency
   const [displayCurrency, setDisplayCurrency] = useState<'AUD' | 'NZD'>('AUD'); 

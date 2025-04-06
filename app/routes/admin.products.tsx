@@ -1,10 +1,10 @@
-import { LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
-import { useActionData, useLoaderData, useNavigation, Link } from "react-router";
+import { useNavigation, Link } from "react-router";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
-import { DB, Product, Basket } from "kysely-codegen";
+import { type DB } from "kysely-codegen";
 import { sql } from "kysely";
-import { ProductCard } from "~/components/ProductCard.tsx";
+import { ProductCard } from "~/components/ProductCard";
+import type { Route } from "./+types/_index";
 
 // Define the type for a product with baskets (including basket IDs)
 type ProductFromDB = DB['product']; 
@@ -13,18 +13,7 @@ export interface ProductWithBasketObjects extends ProductFromDB {
   baskets: { id: string; name: string }[];
 }
 
-// ActionData type for this route (allows error or empty success object)
-type ActionData = { error: string } | { /* Empty object for success */ };
-
-// Define LoaderData type
-type LoaderData = {
-  products: ProductWithBasketObjects[];
-  // Use Pick to specify only id and name are present
-  baskets: Pick<Basket, 'id' | 'name'>[]; 
-  selectedBasketId: string | null;
-};
-
-export async function loader({ context, request }: LoaderFunctionArgs): Promise<Response> {
+export async function loader({ context, request }: Route.LoaderArgs){
   const db = new Kysely<DB>({
     dialect: new D1Dialect({ database: context.cloudflare.env.DB }),
   });
@@ -77,7 +66,7 @@ export async function loader({ context, request }: LoaderFunctionArgs): Promise<
   return Response.json({ products: displayedProducts, baskets: allBaskets, selectedBasketId });
 }
 
-export async function action({ request, context }: ActionFunctionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
@@ -103,10 +92,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
   return Response.json({ error: "Invalid intent for this route" }, { status: 400 });
 }
 
-export default function AdminProducts() {
+export default function AdminProducts({ actionData, loaderData}: Route.ComponentProps) {
   // Add explicit type to useLoaderData
-  const { products, baskets, selectedBasketId } = useLoaderData<LoaderData>(); 
-  const actionData = useActionData<typeof action>();
+  const { products, baskets, selectedBasketId } = loaderData; 
   const navigation = useNavigation();
 
   // Calculate totals

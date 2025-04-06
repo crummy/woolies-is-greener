@@ -1,7 +1,7 @@
-import { AUProduct, Basket, NZProduct } from "~/types/types";
+import type { AUProduct, Basket, NZProduct } from "~/types/types";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
-import { DB } from "kysely-codegen";
+import type { DB } from "kysely-codegen";
 import { ulid } from "./ulid";
 
 const productId = () => `p_${ulid()}`;

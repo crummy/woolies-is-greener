@@ -1,21 +1,13 @@
-import { redirect, type LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
-import { Form, useLoaderData, useNavigation, useParams, Link, useActionData } from "react-router";
-import { Kysely, sql } from "kysely";
+import { redirect } from "react-router";
+import { Form, useNavigation, useParams, Link } from "react-router";
+import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
-import { DB, Product, Basket } from "kysely-codegen";
+import type { DB } from "kysely-codegen";
 import { ulid } from "~/services/ulid";
-
-type ActionData = { error: string };
-
-// Updated LoaderData type
-type LoaderData = {
-  product: Product;
-  allBaskets: Basket[];
-  currentBasketIds: string[];
-};
+import type { Route } from "./+types/admin.products_.$id";
 
 // Loader to fetch product, all baskets, and current product baskets
-export async function loader({ params, context }: LoaderFunctionArgs): Promise<Response> {
+export async function loader({ params, context }: Route.LoaderArgs): Promise<Response> {
   const productId = params.id;
   if (!productId) {
     throw new Response("Product ID not found", { status: 404 });
@@ -68,7 +60,7 @@ export async function loader({ params, context }: LoaderFunctionArgs): Promise<R
 }
 
 // Updated Action to handle product update AND basket associations
-export async function action({ request, params, context }: ActionFunctionArgs) {
+export async function action({ request, params, context }: Route.ActionArgs) {
   const productId = params.id;
   if (!productId) {
     return Response.json({ error: "Product ID missing" }, { status: 400 });
@@ -160,9 +152,8 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
 }
 
 // Updated Component with Basket Checkboxes
-export default function EditProductRoute() {
-  const { product, allBaskets, currentBasketIds } = useLoaderData<LoaderData>();
-  const actionData = useActionData<ActionData>();
+export default function EditProductRoute({ loaderData, actionData }: Route.ComponentProps) {
+  const { product, allBaskets, currentBasketIds } = loaderData
   const navigation = useNavigation();
   const params = useParams();
 

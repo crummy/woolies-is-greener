@@ -3,3 +3,4 @@ build/
 .wrangler/
 .idea/
 .DS_Store
+.react-router/

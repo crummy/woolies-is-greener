@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import type { AUProductSchema, NZProductSchema } from "~/types/api";
 import { z } from "zod";
 import { searchWoolworths } from "~/services/search";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import type { ActionFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 import { Form, useActionData, useNavigation, useSearchParams, useLoaderData } from "react-router";
 import { linkProducts } from "~/services/db";
-import { ProductMatchCard } from "~/components/ProductMatchCard.tsx";
-import { Toast } from "~/components/Toast.tsx";
+import { ProductMatchCard } from "~/components/ProductMatchCard";
+import { Toast } from "~/components/Toast";
+import type { Route } from "./+types/admin.products_.new";
 
 type AUProduct = z.infer<typeof AUProductSchema>;
 type NZProduct = z.infer<typeof NZProductSchema>;
@@ -25,7 +26,7 @@ type ActionData =
   | { success: string; error?: never }
   | null;
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const searchTerm = url.searchParams.get("q");
 

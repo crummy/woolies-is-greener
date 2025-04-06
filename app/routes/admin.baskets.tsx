@@ -1,12 +1,13 @@
-import { LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
+import { type ActionFunctionArgs } from "react-router";
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { useState } from "react";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
-import { DB } from "kysely-codegen";
+import { type DB } from "kysely-codegen";
 import { ulid } from "~/services/ulid";
+import type { Route } from "./+types/admin.baskets";
 
-export async function loader({ context }: LoaderFunctionArgs) {
+export async function loader({ context }: Route.LoaderArgs) {
   const db = new Kysely<DB>({
     dialect: new D1Dialect({ database: context.cloudflare.env.DB }),
   });
@@ -54,9 +55,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
   return Response.json({ error: "Invalid intent" }, { status: 400 });
 }
 
-export default function AdminBaskets() {
-  const { baskets } = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
+export default function AdminBaskets({ loaderData, actionData }: Route.ComponentProps) {
+  const { baskets } = loaderData
   const navigation = useNavigation();
   const [isCreating, setIsCreating] = useState(false);
 
