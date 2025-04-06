@@ -1,20 +1,10 @@
-import { json, LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { useState } from "react";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
 import { DB } from "kysely-codegen";
 import { ulid } from "~/services/ulid";
-
-type Basket = {
-  id: string;
-  name: string;
-  description: string;
-};
-
-type ActionData = 
-  | { success: true }
-  | { error: string };
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const db = new Kysely<DB>({
@@ -22,7 +12,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
   });
 
   const baskets = await db.selectFrom("basket").selectAll().execute();
-  return json({ baskets });
+  return Response.json({ baskets });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -38,7 +28,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const description = formData.get("description");
 
     if (!name || !description) {
-      return json<ActionData>({ error: "Name and description are required" }, { status: 400 });
+      return Response.json({ error: "Name and description are required" }, { status: 400 });
     }
 
     const id = `b_${ulid()}`;
@@ -48,20 +38,20 @@ export async function action({ request, context }: ActionFunctionArgs) {
       description: description.toString(),
     }).execute();
 
-    return json<ActionData>({ success: true });
+    return Response.json({ success: true });
   }
 
   if (intent === "delete") {
     const id = formData.get("id");
     if (!id) {
-      return json<ActionData>({ error: "Basket ID is required" }, { status: 400 });
+      return Response.json({ error: "Basket ID is required" }, { status: 400 });
     }
 
     await db.deleteFrom("basket").where("id", "=", id.toString()).execute();
-    return json<ActionData>({ success: true });
+    return Response.json({ success: true });
   }
 
-  return json<ActionData>({ error: "Invalid intent" }, { status: 400 });
+  return Response.json({ error: "Invalid intent" }, { status: 400 });
 }
 
 export default function AdminBaskets() {

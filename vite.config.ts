@@ -1,23 +1,17 @@
 import { defineConfig } from "vite";
-import {
-  vitePlugin as remix,
-  cloudflareDevProxyVitePlugin,
-} from "@remix-run/dev";
+import { reactRouter } from "@react-router/dev/vite";
+import { cloudflareDevProxy } from "@react-router/dev/vite/cloudflare";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { getLoadContext } from "./load-context";
+import type { Config } from "@react-router/dev/config";
 
-declare module "@remix-run/cloudflare" {
-  interface Future {
-    v3_singleFetch: true;
-  }
-}
-
-export default defineConfig({
+export default {
   plugins: [
-    cloudflareDevProxyVitePlugin({
+    cloudflareDevProxy({
       getLoadContext,
     }),
-    remix({
+    reactRouter({
+      prerender: ["/"],
       future: {
         v3_fetcherPersist: true,
         v3_relativeSplatPath: true,
@@ -39,4 +33,4 @@ export default defineConfig({
   build: {
     minify: true,
   },
-});
+} satisfies Config;

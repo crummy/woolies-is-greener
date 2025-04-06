@@ -2,9 +2,9 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import type { AUProductSchema, NZProductSchema } from "~/types/api";
 import { z } from "zod";
 import { searchWoolworths } from "~/services/search";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect, json } from "@remix-run/node";
-import { Form, useActionData, useNavigation, useSearchParams, useLoaderData } from "@remix-run/react";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { redirect } from "react-router";
+import { Form, useActionData, useNavigation, useSearchParams, useLoaderData } from "react-router";
 import { linkProducts } from "~/services/db";
 import { ProductMatchCard } from "~/components/ProductMatchCard.tsx";
 import { Toast } from "~/components/Toast.tsx";
@@ -30,7 +30,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const searchTerm = url.searchParams.get("q");
 
   if (!searchTerm) {
-    return json({ auProducts: [], nzProducts: [] });
+    return Response.json({ auProducts: [], nzProducts: [] });
   }
 
   try {
@@ -38,7 +38,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const result = await searchWoolworths(searchTerm);
     
     if (result.error) {
-      return json(
+      return Response.json(
         { 
           auProducts: [], 
           nzProducts: [], 
@@ -51,9 +51,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const auProducts = result.au ?? [];
     const nzProducts = result.nz ?? [];
 
-    return json({ auProducts, nzProducts });
+    return Response.json({ auProducts, nzProducts });
   } catch (error) {
-    return json(
+    return Response.json(
       { 
         auProducts: [], 
         nzProducts: [], 
@@ -103,10 +103,10 @@ export async function action({
           await linkProducts(context.cloudflare.env, title, finalAuProduct, finalNzProduct, category as "value" | "quality" | "luxury")
         }
 
-        return json({ success: "Product matched successfully!" });
+        return Response.json({ success: "Product matched successfully!" });
       default:
         console.error("Invalid intent", intent);
-        return json({ error: "Invalid intent" }, { status: 400 });
+        return Response.json({ error: "Invalid intent" }, { status: 400 });
     }
 }
 

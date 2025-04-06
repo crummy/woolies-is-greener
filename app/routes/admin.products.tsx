@@ -1,5 +1,5 @@
-import { json, LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, useNavigation, Link, useSearchParams } from "@remix-run/react";
+import { LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
+import { useActionData, useLoaderData, useNavigation, Link } from "react-router";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
 import { DB, Product, Basket } from "kysely-codegen";
@@ -74,7 +74,7 @@ export async function loader({ context, request }: LoaderFunctionArgs): Promise<
       );
   }
 
-  return json<LoaderData>({ products: displayedProducts, baskets: allBaskets, selectedBasketId });
+  return Response.json({ products: displayedProducts, baskets: allBaskets, selectedBasketId });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -88,19 +88,19 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (intent === "delete") {
     const id = formData.get("id");
     if (!id) {
-      return json<ActionData>({ error: "Product ID is required" }, { status: 400 });
+      return Response.json({ error: "Product ID is required" }, { status: 400 });
     }
     try {
       await db.deleteFrom("product").where("id", "=", id.toString()).executeTakeFirstOrThrow();
       // Return empty object on success
-      return json<ActionData>({}); 
+      return Response.json({}); 
     } catch (error) {
         console.error("Failed to delete product:", error);
-        return json<ActionData>({ error: "Failed to delete product." }, { status: 500 });
+        return Response.json({ error: "Failed to delete product." }, { status: 500 });
     }
   }
 
-  return json<ActionData>({ error: "Invalid intent for this route" }, { status: 400 });
+  return Response.json({ error: "Invalid intent for this route" }, { status: 400 });
 }
 
 export default function AdminProducts() {

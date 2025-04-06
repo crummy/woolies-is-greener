@@ -10,16 +10,20 @@
     "**/.client/**/*.tsx"
   ],
   "compilerOptions": {
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2022"
+    ],
     "types": [
-        "@remix-run/cloudflare",
-        "vite/client",
-        "node",
-        "@cloudflare/workers-types/2023-07-01"
+      "@react-router/cloudflare",
+      "vite/client",
+      "node",
+      "@cloudflare/workers-types/2023-07-01"
     ],
     "target": "ES2022",
     "module": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "strict": true,
@@ -30,9 +34,13 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": [
+        "./app/*"
+      ]
     },
     "noEmit": true
   },
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

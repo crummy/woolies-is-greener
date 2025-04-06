@@ -1,6 +1,5 @@
-import type { MetaFunction, LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { json } from "@remix-run/node";
-import { useLoaderData, Link } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { useLoaderData, Link } from "react-router";
 import { useState } from "react";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
@@ -77,18 +76,21 @@ export async function loader({ context, request }: LoaderFunctionArgs): Promise<
       });
   }
 
-  return json<LoaderData>({
+  const today = new Date().toLocaleDateString();
+
+  return Response.json({
     allBaskets,
     selectedBasketId,
     productsInBasket,
     totalAuPrice,
     totalNzPrice,
+    today,
   });
 }
 
 
 export default function Index() {
-  const { allBaskets, selectedBasketId, productsInBasket, totalAuPrice, totalNzPrice } = useLoaderData<LoaderData>();
+  const { allBaskets, selectedBasketId, productsInBasket, totalAuPrice, totalNzPrice, today } = useLoaderData<LoaderData>();
 
   // State for selected display currency
   const [displayCurrency, setDisplayCurrency] = useState<'AUD' | 'NZD'>('AUD'); 
@@ -136,7 +138,7 @@ export default function Index() {
 
   return (
     // Main container with yellow background
-    <div className="bg-yellow-100 min-h-screen p-6 sm:p-8 font-sans">
+    (<div className="bg-yellow-100 min-h-screen p-6 sm:p-8 font-sans">
       {/* Header */}
       <header className="text-center mb-10 sm:mb-12">
         <h1 className="text-3xl sm:text-4xl font-bold text-teal-800 mb-2">
@@ -146,7 +148,6 @@ export default function Index() {
           An experiment in grocery price comparison across the ditch
         </p>
       </header>
-
       {/* Basket Selection - Use sortedBaskets */}
       <section className="flex flex-wrap justify-center gap-4 sm:gap-8 mb-10 sm:mb-12">
         {sortedBaskets.map(basket => (
@@ -171,7 +172,6 @@ export default function Index() {
            <p className="text-gray-600">No baskets found.</p>
          )}
       </section>
-
       {/* Overall Price Display */}
       {selectedBasketId && (
          <section className="bg-white rounded-lg shadow-md p-6 sm:p-8 mb-10 sm:mb-12 max-w-3xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-8">
@@ -217,7 +217,6 @@ export default function Index() {
             </div>
          </section>
       )}
-
       {/* Item List Table */}
       {selectedBasketId && productsInBasket.length > 0 && (
           <section className="bg-white rounded-lg shadow-md p-6 sm:p-8 max-w-3xl mx-auto">
@@ -269,7 +268,6 @@ export default function Index() {
               </div>
           </section>
       )}
-
       {/* Empty State Messages */}
       {selectedBasketId && productsInBasket.length === 0 && (
         <div className="text-center text-gray-600 mt-8 bg-white p-4 rounded shadow-md max-w-3xl mx-auto">
@@ -279,20 +277,18 @@ export default function Index() {
       {!selectedBasketId && allBaskets.length > 0 && (
          <div className="text-center text-gray-600 mt-8">Please select a basket to see prices.</div>
       )}
-
       <footer className="mt-12 pt-6 border-t border-gray-300 text-center text-xs sm:text-sm text-gray-500 max-w-2xl mx-auto"> {/* Moved common styles here, changed color */} 
         <p>
           This project is designed to compare approximate costs of similar items between NZ and Aus. A lot of Kiwis are heading across for jobs and I wanted to see if some basic costs were similar or if the higher wages would get absorbed. I've attempted to match like-for-like, but sometimes had to find equivalents. I ignored sales prices where suitable. Hope you find this use and informative!
         </p>
         <p className="mt-2">
-         Some facts: This website was generated on {new Date().toLocaleDateString()}. At that time, the NZD/AUD exchange rate was {NZD_TO_AUD_RATE}. I made about 80% of it with AI. And it was inspired by a $7.50 avocado I saw in Melbourne.
+         Some facts: This website was generated on {today}. At that time, the NZD/AUD exchange rate was {NZD_TO_AUD_RATE}. I made about 80% of it with AI. And it was inspired by a $7.50 avocado I saw in Melbourne.
          </p>
         <p className="mt-2">
            Feedback? <a href="mailto:crummynz@gmail.com" className="text-blue-600 hover:underline">Send me an email</a>.
         </p>
         <p className="mt-2">- Malcolm Crum</p>
       </footer>
-
-    </div>
+    </div>)
   );
 }

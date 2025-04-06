@@ -1,5 +1,5 @@
 import { type ProductWithBasketObjects } from "~/routes/admin.products.tsx"; // Use .tsx and type import
-import { Link, Form, type Navigation } from "@remix-run/react";
+import { Link, Form, type Navigation } from "react-router";
 
 type ProductCardProps = {
   product: ProductWithBasketObjects;

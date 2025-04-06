@@ -1,5 +1,5 @@
-import { json, redirect, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { Form, useLoaderData, useNavigation, useParams, Link, useActionData } from "@remix-run/react";
+import { redirect, type LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
+import { Form, useLoaderData, useNavigation, useParams, Link, useActionData } from "react-router";
 import { Kysely, sql } from "kysely";
 import { D1Dialect } from "kysely-d1";
 import { DB, Product, Basket } from "kysely-codegen";
@@ -64,21 +64,21 @@ export async function loader({ params, context }: LoaderFunctionArgs): Promise<R
   // Extract just the IDs for easier lookup in the component
   const currentBasketIds = currentLinks.map(link => link.basketId);
 
-  return json<LoaderData>({ product, allBaskets, currentBasketIds });
+  return Response.json({ product, allBaskets, currentBasketIds });
 }
 
 // Updated Action to handle product update AND basket associations
 export async function action({ request, params, context }: ActionFunctionArgs) {
   const productId = params.id;
   if (!productId) {
-    return json<ActionData>({ error: "Product ID missing" }, { status: 400 });
+    return Response.json({ error: "Product ID missing" }, { status: 400 });
   }
 
   const formData = await request.formData();
   const intent = formData.get("intent");
 
   if (intent !== "update") {
-     return json<ActionData>({ error: "Invalid intent" }, { status: 400 });
+     return Response.json({ error: "Invalid intent" }, { status: 400 });
   }
 
   const db = new Kysely<DB>({
@@ -99,7 +99,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
   const submittedBasketIds = new Set(formData.getAll("basketIds") as string[]);
 
   if (!title || !nzPrice || !nzPriceOriginal || !auPrice || !auPriceOriginal || !nzSku || !auStockcode) {
-    return json<ActionData>({ error: "Required product fields are missing" }, { status: 400 });
+    return Response.json({ error: "Required product fields are missing" }, { status: 400 });
   }
 
   try {
@@ -155,7 +155,7 @@ export async function action({ request, params, context }: ActionFunctionArgs) {
   } catch (error) {
     console.error("Failed to update product and/or baskets:", error);
     // Provide a more specific error if possible, otherwise generic
-    return json<ActionData>({ error: "Failed to save changes. Check console for details." }, { status: 500 });
+    return Response.json({ error: "Failed to save changes. Check console for details." }, { status: 500 });
   }
 }
 
