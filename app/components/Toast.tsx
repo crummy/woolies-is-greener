@@ -26,17 +26,19 @@ export function Toast({ message, type, show, onClose }: ToastProps) {
     bgColor = 'bg-green-500';
   }
   // Add more types like error if needed
-  // else if (type === 'error') { 
+  // else if (type === 'error') {
   //   bgColor = 'bg-red-500';
   // }
 
   return (
-    <div 
-      className={`fixed bottom-5 right-5 ${bgColor} text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+    <div
+      className={`fixed bottom-5 right-5 ${bgColor} rounded px-4 py-2 text-white shadow-lg transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
       role="alert"
     >
       {message}
-      <button onClick={onClose} className="ml-4 font-bold">X</button>
+      <button onClick={onClose} className="ml-4 font-bold">
+        X
+      </button>
     </div>
   );
-} 
+}

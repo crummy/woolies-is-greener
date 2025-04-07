@@ -1,5 +1,5 @@
-import { type ProductWithBasketObjects } from "~/routes/admin.products.tsx"; // Use .tsx and type import
-import { Link, Form, type Navigation } from "react-router";
+import { type ProductWithBasketObjects } from '~/routes/admin.products.tsx'; // Use .tsx and type import
+import { Link, Form, type Navigation } from 'react-router';
 
 type ProductCardProps = {
   product: ProductWithBasketObjects;
@@ -8,14 +8,14 @@ type ProductCardProps = {
 
 export function ProductCard({ product, navigation }: ProductCardProps) {
   return (
-    <div key={product.id} className="border rounded p-4">
-      <div className="flex justify-between items-start">
-        <div className="flex gap-4 flex-grow">
+    <div key={product.id} className="rounded border p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex flex-grow gap-4">
           {product.imageUrl && (
-            <img 
-              src={product.imageUrl} 
+            <img
+              src={product.imageUrl}
               alt={product.title}
-              className="w-24 h-24 object-cover rounded flex-shrink-0"
+              className="h-24 w-24 flex-shrink-0 rounded object-cover"
             />
           )}
           <div className="flex-grow">
@@ -23,16 +23,16 @@ export function ProductCard({ product, navigation }: ProductCardProps) {
             {product.baskets && product.baskets.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {product.baskets.map((basket: { id: string; name: string }) => (
-                  <span 
+                  <span
                     key={basket.id}
-                    className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full"
+                    className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700"
                   >
                     {basket.name}
                   </span>
                 ))}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4 mt-2">
+            <div className="mt-2 grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-600">NZ Price: ${product.nzPrice}</p>
                 <p className="text-sm text-gray-500">Original: ${product.nzPriceOriginal}</p>
@@ -48,24 +48,26 @@ export function ProductCard({ product, navigation }: ProductCardProps) {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 flex-shrink-0 ml-4">
+        <div className="ml-4 flex flex-shrink-0 gap-2">
           <Link
             to={`/admin/products/${product.id}`}
-            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
+            className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
           >
             Edit
           </Link>
           <Form method="post">
             <input type="hidden" name="intent" value="delete" />
-            <input type="hidden" name="id" value={product.id ?? ""} />
+            <input type="hidden" name="id" value={product.id ?? ''} />
             <button
               type="submit"
-              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
-              disabled={navigation.state === "submitting" && navigation.formData?.get('id') === product.id}
+              className="rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600"
+              disabled={
+                navigation.state === 'submitting' && navigation.formData?.get('id') === product.id
+              }
             >
-              {navigation.state === "submitting" && navigation.formData?.get('id') === product.id
-                ? "Deleting..."
-                : "Delete"}
+              {navigation.state === 'submitting' && navigation.formData?.get('id') === product.id
+                ? 'Deleting...'
+                : 'Delete'}
             </button>
           </Form>
         </div>
@@ -76,4 +78,4 @@ export function ProductCard({ product, navigation }: ProductCardProps) {
 
 // Ensure the type is exported from the route file or move it to a shared types file
 // Example export needed in app/routes/admin.products.tsx:
-// export type { ProductWithBasketObjects }; 
+// export type { ProductWithBasketObjects };

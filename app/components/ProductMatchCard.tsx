@@ -1,6 +1,6 @@
-import type { AUProductSchema, NZProductSchema } from "~/types/api.ts";
-import { z } from "zod";
-import { auLink, nzLink } from "~/services/source.ts"; // Import link functions
+import type { AUProductSchema, NZProductSchema } from '~/types/api.ts';
+import { z } from 'zod';
+import { auLink, nzLink } from '~/services/source.ts'; // Import link functions
 
 type AUProduct = z.infer<typeof AUProductSchema>;
 type NZProduct = z.infer<typeof NZProductSchema>;
@@ -22,7 +22,8 @@ export function ProductMatchCard({ product, isSelected, onClick }: ProductMatchC
   let sourceLink: string;
 
   // Type guard to access properties correctly
-  if ('Stockcode' in product) { // AU Product
+  if ('Stockcode' in product) {
+    // AU Product
     imageSrc = product.SmallImageFile;
     altText = product.Name;
     name = product.Name;
@@ -31,7 +32,8 @@ export function ProductMatchCard({ product, isSelected, onClick }: ProductMatchC
     originalPrice = product.WasPrice;
     isAvailable = product.IsPurchasable;
     sourceLink = auLink(product.Stockcode.toString()); // Pass Stockcode directly
-  } else { // NZ Product
+  } else {
+    // NZ Product
     imageSrc = product.images.small;
     altText = product.name;
     name = product.name;
@@ -44,45 +46,50 @@ export function ProductMatchCard({ product, isSelected, onClick }: ProductMatchC
 
   return (
     <div
-      className={`relative p-2 border rounded cursor-pointer ${
-        isSelected
-          ? "border-blue-200 bg-blue-50/50"
-          : "hover:bg-gray-50/50 hover:border-gray-200"
+      className={`relative cursor-pointer rounded border p-2 ${
+        isSelected ? 'border-blue-200 bg-blue-50/50' : 'hover:border-gray-200 hover:bg-gray-50/50'
       } ${!isAvailable ? 'opacity-50' : ''}`}
       onClick={onClick} // Use the passed onClick handler
     >
       {/* Source Link Icon (Top Right) */}
-      <a 
+      <a
         href={sourceLink}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()} // Prevent card selection when clicking link
         title="View on Woolworths site"
-        className="absolute top-1 right-1 p-1 text-gray-400 hover:text-blue-600"
+        className="absolute right-1 top-1 p-1 text-gray-400 hover:text-blue-600"
       >
-         {/* Simple link icon (replace with SVG if preferred) */} 
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+        {/* Simple link icon (replace with SVG if preferred) */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-4 w-4"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+          />
         </svg>
       </a>
 
       <div className="flex items-start gap-2">
-        <img
-          src={imageSrc}
-          alt={altText}
-          className="w-16 h-16 object-contain"
-        />
+        <img src={imageSrc} alt={altText} className="h-16 w-16 object-contain" />
         <div>
           <h3 className="font-medium">{name}</h3>
           {sizeInfo && <p className="text-sm text-gray-600">{sizeInfo}</p>}
           <p className="text-sm">
             <span className="font-bold">${salePrice?.toFixed(2) ?? 'N/A'}</span>
             {originalPrice && originalPrice !== salePrice && (
-              <span className="ml-2 line-through text-gray-500">${originalPrice.toFixed(2)}</span>
+              <span className="ml-2 text-gray-500 line-through">${originalPrice.toFixed(2)}</span>
             )}
           </p>
         </div>
       </div>
     </div>
   );
-} 
+}

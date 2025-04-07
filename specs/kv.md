@@ -8,15 +8,15 @@
 - Value: JSON object containing:
   ```json
   {
-      "sku": "123",
-      "name": "Cage-Free Size 7 Eggs (Dozen)",
-      "description": "Farm fresh cage-free eggs",
-      "imageUrl": "https://example.com/eggs.jpg",
-      "categoryId": "eggs",
-      "nzPrice": 5.99,
-      "auPrice": 4.89,
-      "basketIds": ["quality"],
-      "updatedAt": "2025-03-26T22:29:45.367Z"
+    "sku": "123",
+    "name": "Cage-Free Size 7 Eggs (Dozen)",
+    "description": "Farm fresh cage-free eggs",
+    "imageUrl": "https://example.com/eggs.jpg",
+    "categoryId": "eggs",
+    "nzPrice": 5.99,
+    "auPrice": 4.89,
+    "basketIds": ["quality"],
+    "updatedAt": "2025-03-26T22:29:45.367Z"
   }
   ```
 
@@ -26,10 +26,10 @@
 - Value: JSON object with:
   ```json
   {
-      "id": "eggs",
-      "name": "Eggs",
-      "description": "Fresh eggs",
-      "displayOrder": 3
+    "id": "eggs",
+    "name": "Eggs",
+    "description": "Fresh eggs",
+    "displayOrder": 3
   }
   ```
 
@@ -39,9 +39,9 @@
 - Value: JSON object with:
   ```json
   {
-      "id": "value",
-      "name": "Value Basket",
-      "description": "Basic essentials at lowest prices"
+    "id": "value",
+    "name": "Value Basket",
+    "description": "Basic essentials at lowest prices"
   }
   ```
 
@@ -61,9 +61,9 @@ These index lists help with quick lookups without having to scan all products.
 - Value: JSON with exchange rate data and last updated timestamp:
   ```json
   {
-      "nzdToAud": 0.92,
-      "audToNzd": 1.09,
-      "last_updated": "2025-03-27T12:00:00Z"
+    "nzdToAud": 0.92,
+    "audToNzd": 1.09,
+    "last_updated": "2025-03-27T12:00:00Z"
   }
   ```
 
@@ -73,11 +73,11 @@ These index lists help with quick lookups without having to scan all products.
 - Value: Pre-calculated summary data for each basket:
   ```json
   {
-      "basketId": "value",
-      "nzTotal": 87.45,
-      "auTotal": 81.22,
-      "differencePercentage": -7.1,
-      "cheaperCountry": "au"
+    "basketId": "value",
+    "nzTotal": 87.45,
+    "auTotal": 81.22,
+    "differencePercentage": -7.1,
+    "cheaperCountry": "au"
   }
   ```
 
