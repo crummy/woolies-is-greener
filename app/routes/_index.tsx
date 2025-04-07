@@ -246,8 +246,6 @@ export default function Index({ loaderData }: Route.ComponentProps) {
         <div className="mt-8 text-center text-gray-600">Please select a basket to see prices.</div>
       )}
       <footer className="mx-auto mt-12 max-w-2xl border-t border-gray-300 pt-6 text-center text-xs text-gray-500 sm:text-sm">
-        {' '}
-        {/* Moved common styles here, changed color */}
         <p>
           This project is designed to compare approximate costs of similar items between NZ and Aus.
           A lot of Kiwis are heading across for jobs and I wanted to see if some basic costs were
