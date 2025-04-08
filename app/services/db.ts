@@ -128,17 +128,9 @@ export async function getProductsByBasketName(basketName: string | null) {
   }
 
   // Use the ID of the found/default basket
-  const selectedBasketId = selectedBasket?.id ?? null;
-
-  // If we don't have a basket, just return empty data
+  const selectedBasketId = selectedBasket?.id;
   if (!selectedBasketId) {
-    return {
-      allBaskets,
-      selectedBasketId: null,
-      productsInBasket: [],
-      totalAuPrice: 0,
-      totalNzPrice: 0,
-    };
+    throw new Error('No basket selected or found');
   }
 
   // Get products in the selected basket
